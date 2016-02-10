@@ -6,6 +6,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 object Example {
   implicit val canada = Locale.CANADA
   
+  /*
+   * Blocking API
+   */
   val genderize = GenderizeClient.blocking()
   genderize.name("jake") match {
     case GenderlessName(name) =>
@@ -21,10 +24,11 @@ object Example {
   genderize.names(Seq("jake", "jack"))
   
   /*
-   * Async
+   * Async API
    */
   val asyncGenderize = GenderizeClient.async()
-  val futureGender = for {
-    gendered <- asyncGenderize.name("jake")
-  } yield gendered
+  val futureGenderedNames = for {
+    genderedJake <- asyncGenderize.name("jake")
+    genderedJackie <- asyncGenderize.name("jackie")
+  } yield (genderedJake, genderedJackie)
 }
