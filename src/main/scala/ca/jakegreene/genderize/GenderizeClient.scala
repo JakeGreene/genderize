@@ -8,11 +8,10 @@ import scala.concurrent.Future
  * XXX The API requires:
  * - ISO 3166-1 alpha-2 country codes. Use Locale.getCountry()
  * - ISO 639-1 language codes. Use Locale.getLanguage()
- * XXX Accept an apikey for users who pay for the API
  */
 object GenderizeClient {
-  def blocking(): BlockingGenderizeClient = new BlockingGenderizeClient()
-  def async(): AsyncGenderizeClient = new AsyncGenderizeClient()
+  def blocking(apiKey: Option[String] = None): BlockingGenderizeClient = new BlockingGenderizeClient(apiKey)
+  def async(apiKey: Option[String] = None): AsyncGenderizeClient = new AsyncGenderizeClient(apiKey)
 }
 
 trait GenderizeClient[F[_]] {
@@ -47,12 +46,12 @@ trait GenderizeClient[F[_]] {
   def names(givenName: String, others: String*)(implicit locale: Locale): F[Seq[Name]] = names(givenName +: others)
 }
 
-class AsyncGenderizeClient extends GenderizeClient[Future] {
+class AsyncGenderizeClient(apiKey: Option[String]) extends GenderizeClient[Future] {
   override def nameWithLocale(givenName: String, locale: Locale): Future[Name] = ???
   override def namesWithLocale(givenNames: Seq[String], locale: Locale): Future[Seq[Name]] = ???
 }
 
-class BlockingGenderizeClient extends GenderizeClient[Id] {
+class BlockingGenderizeClient(apiKey: Option[String]) extends GenderizeClient[Id] {
   override def nameWithLocale(givenName: String, locale: Locale): Name = ???
   override def namesWithLocale(givenNames: Seq[String], locale: Locale): Seq[Name] = ???
 }
