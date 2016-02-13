@@ -2,8 +2,12 @@ package ca.jakegreene.genderize
 
 import java.util.Locale
 import scala.concurrent.ExecutionContext.Implicits.global
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
 
 object Example {
+  implicit val system = ActorSystem("genderize-example-system")
+  implicit val materializer = ActorMaterializer()
   implicit val canada = Locale.CANADA
   
   /*

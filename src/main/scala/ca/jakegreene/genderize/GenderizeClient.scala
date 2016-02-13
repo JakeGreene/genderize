@@ -3,6 +3,11 @@ package ca.jakegreene.genderize
 import java.util.Locale
 import scala.language.higherKinds
 import scala.concurrent.Future
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
+import akka.http.scaladsl._
+import akka.http.scaladsl.model._
+import akka.util.ByteString
 
 /*
  * XXX The API requires:
@@ -10,8 +15,8 @@ import scala.concurrent.Future
  * - ISO 639-1 language codes. Use Locale.getLanguage()
  */
 object GenderizeClient {
-  def blocking(apiKey: Option[String] = None): BlockingGenderizeClient = new BlockingGenderizeClient(apiKey)
-  def async(apiKey: Option[String] = None): AsyncGenderizeClient = new AsyncGenderizeClient(apiKey)
+  def blocking(apiKey: Option[String] = None)(implicit system: ActorSystem, materializer: ActorMaterializer): BlockingGenderizeClient = new BlockingGenderizeClient(apiKey)
+  def async(apiKey: Option[String] = None)(implicit system: ActorSystem, materializer: ActorMaterializer): AsyncGenderizeClient = new AsyncGenderizeClient(apiKey)
 }
 
 trait GenderizeClient[F[_]] {
@@ -46,12 +51,30 @@ trait GenderizeClient[F[_]] {
   def names(givenName: String, others: String*)(implicit locale: Locale): F[Seq[Name]] = names(givenName +: others)
 }
 
-class AsyncGenderizeClient(apiKey: Option[String]) extends GenderizeClient[Future] {
-  override def nameWithLocale(givenName: String, locale: Locale): Future[Name] = ???
+class AsyncGenderizeClient(apiKey: Option[String])(implicit system: ActorSystem, materializer: ActorMaterializer) extends GenderizeClient[Future] {
+  import system.dispatcher
+  
+  override def nameWithLocale(givenName: String, locale: Locale): Future[Name] = {
+    val countryId = locale.getCountry
+    val languageId = locale.getLanguage
+    var optionalParams = ""
+    val request = HttpRequest(uri = s"https://api.genderize.io/?name=$givenName&country_id=${}&language_id=${}")
+    val response = Http().singleRequest(request)
+    response
+      .flatMap {
+        case HttpResponse(code, headers, entity, _) =>
+          // Decode JSON into GenderedName or GenderlessName
+          entity.dataBytes.runFold(ByteString(""))(_ ++ _).map(_.decodeString("UTF-8"))
+      }
+      .map { name =>
+        GenderlessName(name)
+      }
+  }
+  
   override def namesWithLocale(givenNames: Seq[String], locale: Locale): Future[Seq[Name]] = ???
 }
 
-class BlockingGenderizeClient(apiKey: Option[String]) extends GenderizeClient[Id] {
+class BlockingGenderizeClient(apiKey: Option[String])(implicit system: ActorSystem, materializer: ActorMaterializer) extends GenderizeClient[Id] {
   override def nameWithLocale(givenName: String, locale: Locale): Name = ???
   override def namesWithLocale(givenNames: Seq[String], locale: Locale): Seq[Name] = ???
 }
